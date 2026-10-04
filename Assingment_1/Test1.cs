@@ -253,5 +253,93 @@ public sealed class BillSplitterTests
         CollectionAssert.AreEqual(new[] { 66.50m, 66.50m }, result.Select(x => x.Amount).ToArray());
     }
 
+    [TestMethod]
+    public void CalculateShares_AllAttendeesExcluded_ThrowsException()
+    {
+        var splitter = new Splitter();
+        var bill = new Bill(50m, 0m, TipMode.None, 0m);
+        var attendees = new List<Attendee> { new("Alex", 1, false) };
+
+        void Act() => splitter.CalculateShares(bill, attendees, RoundingMode.Bankers);
+
+        Assert.ThrowsException<InvalidOperationException>(Act);
+    }
+
+    [TestMethod]
+    public void CalculateShares_TotalWeightsZero_ThrowsException()
+    {
+        var splitter = new Splitter();
+        var bill = new Bill(50m, 0m, TipMode.None, 0m);
+        var attendees = new List<Attendee> { new("Alex", 0, true), new("Blair", 0, true) };
+
+        void Act() => splitter.CalculateShares(bill, attendees, RoundingMode.Bankers);
+
+        Assert.ThrowsException<InvalidOperationException>(Act);
+    }
+
+    [TestMethod]
+    public void Format_DefaultBillReceipt_ContainsLineItems()
+    {
+        var formatter = FixedFormatter();
+        var bill = new Bill(60m, 0m, TipMode.None, 0m);
+        var attendees = new List<Attendee> { new("Alex", 1, true), new("Blair", 1, true) };
+        var shares = new List<Share> { new("Alex", 30m), new("Blair", 30m) };
+
+        var result = formatter.Format(bill, attendees, shares);
+
+        StringAssert.Contains(result, "Alex [Included]: ¤30.00");
+        StringAssert.Contains(result, "Blair [Included]: ¤30.00");
+        StringAssert.Contains(result, "Allocated Total: ¤60.00");
+    }
+
+    [TestMethod]
+    public void Format_ReceiptOutput_ContainsRequiredMetadata()
+    {
+        var formatter = FixedFormatter();
+        var bill = new Bill(0m, 0m, TipMode.None, 0m);
+        var attendees = new List<Attendee> { new("Alex", 1, true) };
+        var shares = new List<Share> { new("Alex", 0m) };
+
+        var result = formatter.Format(bill, attendees, shares);
+
+        StringAssert.Contains(result, "Student Name: Miguel Tarazona");
+        StringAssert.Contains(result, "Date: 2026-10-02");
+        StringAssert.Contains(result, "Created: 2026-10-02 20:15:30 -04:00");
+    }
+
+    [TestMethod]
+    [Ignore("RED/PENDING: Future feature F5 has not been implemented yet.")]
+    public void Format_CsvReceiptExporter_MatchesSchema()
+    {
+        var expectedHeader = "Name,Amount";
+
+        var actualCsv = "Feature F5 is pending";
+
+        Assert.AreEqual(expectedHeader, actualCsv);
+    }
+
+    [TestMethod]
+    [Ignore("RED/PENDING: Future feature F6 has not been implemented yet.")]
+    public void CalculateShares_PaymentRequest_ValidatesStripeMock()
+    {
+        var expectedGatewayCall = true;
+
+        var stripeMockWasCalled = false;
+
+        Assert.AreEqual(expectedGatewayCall, stripeMockWasCalled);
+    }
+
+    [TestMethod]
+    public void Validate_NegativeAttendeeWeight_ReturnsFail()
+    {
+        var validator = new BillValidator();
+        var bill = new Bill(10m, 0m, TipMode.None, 0m);
+        var attendees = new List<Attendee> { new("Alex", -1, true) };
+
+        var result = validator.Validate(bill, attendees);
+
+        Assert.IsFalse(result.IsValid);
+        StringAssert.Contains(string.Join(" ", result.Errors), "weights cannot be negative");
+    }
 
 }
