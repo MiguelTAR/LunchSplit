@@ -342,4 +342,38 @@ public sealed class BillSplitterTests
         StringAssert.Contains(string.Join(" ", result.Errors), "weights cannot be negative");
     }
 
+
+    [TestMethod]
+    public void Validate_BlankAttendeeName_ReturnsFail()
+    {
+        var validator = new BillValidator();
+        var bill = new Bill(10m, 0m, TipMode.None, 0m);
+        var attendees = new List<Attendee> { new(" ", 1, true) };
+
+        var result = validator.Validate(bill, attendees);
+
+        Assert.IsFalse(result.IsValid);
+        StringAssert.Contains(string.Join(" ", result.Errors), "must have a name");
+    }
+
+    [TestMethod]
+    public void CalculateShares_InvalidBill_ThrowsArgumentException()
+    {
+        var splitter = new Splitter();
+        var bill = new Bill(-1m, 0m, TipMode.None, 0m);
+        var attendees = new List<Attendee> { new("Alex", 1, true) };
+
+        void Act() => splitter.CalculateShares(bill, attendees, RoundingMode.Bankers);
+
+        Assert.ThrowsException<ArgumentException>(Act);
+    }
+
+    private static List<Attendee> ThreeEqualAttendees() =>
+        new() { new("Alex", 1, true), new("Blair", 1, true), new("Casey", 1, true) };
+
+    private static ReceiptFormatter FixedFormatter() =>
+        new(() => new DateTimeOffset(2026, 10, 2, 20, 15, 30, TimeSpan.FromHours(-4)));
+}
+
+
 }
