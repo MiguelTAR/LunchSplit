@@ -12,7 +12,7 @@ public sealed class Rounder
         {
             return rawShares.Select(share => new Share(share.Name, share.Amount)).ToList();
         }
-
+        
         var rounded = rawShares
             .Select(share => new Share(share.Name, RoundAmount(share.Amount, mode)))
             .ToList();
