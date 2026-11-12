@@ -4,6 +4,8 @@ namespace RestaurantBillSplitter.Core.Engines;
 
 public sealed class Rounder
 {
+    private const decimal DivisionNoiseTolerance = 0.000000000001m;
+
     public List<Share> RoundShares(List<Share> rawShares, RoundingMode mode)
     {
         ArgumentNullException.ThrowIfNull(rawShares);
@@ -23,7 +25,7 @@ public sealed class Rounder
    
         // This preserves explicit Up/Down behavior for standalone fractional-cent inputs,
         // while ensuring calculated bill allocations add back to the exact grand total.
-        if (rawTotal == targetTotal)
+        if (decimal.Abs(rawTotal - targetTotal) <= DivisionNoiseTolerance)
         {
             var roundedTotal = rounded.Sum(share => share.Amount);
             var differenceInCents = (int)((targetTotal - roundedTotal) * 100m);

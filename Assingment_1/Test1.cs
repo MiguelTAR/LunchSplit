@@ -45,7 +45,7 @@ public sealed class BillSplitterTests
 
         void Act() => splitter.ComputeTip(-0.01m, TipMode.None, 0m);
 
-        Assert.ThrowsException<ArgumentOutOfRangeException>(Act);
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(Act);
     }
 
     [TestMethod]
@@ -55,7 +55,7 @@ public sealed class BillSplitterTests
 
         void Act() => splitter.ComputeTip(100m, TipMode.Fixed, -0.01m);
 
-        Assert.ThrowsException<ArgumentOutOfRangeException>(Act);
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(Act);
     }
 
     [TestMethod]
@@ -260,9 +260,9 @@ public sealed class BillSplitterTests
         var bill = new Bill(50m, 0m, TipMode.None, 0m);
         var attendees = new List<Attendee> { new("Alex", 1, false) };
 
-        var roundingMode = RoundingMode.Bankers;
+        void Act() => splitter.CalculateShares(bill, attendees, RoundingMode.Bankers);
 
-
+        Assert.ThrowsExactly<InvalidOperationException>(Act);
     }
 
     [TestMethod]
@@ -274,7 +274,7 @@ public sealed class BillSplitterTests
 
         void Act() => splitter.CalculateShares(bill, attendees, RoundingMode.Bankers);
 
-        Assert.ThrowsException<InvalidOperationException>(Act);
+        Assert.ThrowsExactly<InvalidOperationException>(Act);
     }
 
     [TestMethod]
@@ -363,11 +363,9 @@ public sealed class BillSplitterTests
         var bill = new Bill(-1m, 0m, TipMode.None, 0m);
         var attendees = new List<Attendee> { new("Alex", 1, true) };
 
-        var roundingMode = RoundingMode.Bankers;
+        void Act() => splitter.CalculateShares(bill, attendees, RoundingMode.Bankers);
 
-
-
-
+        Assert.ThrowsExactly<ArgumentException>(Act);
     }
 
     private static List<Attendee> ThreeEqualAttendees() =>
