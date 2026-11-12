@@ -10,4 +10,8 @@
     <ProjectReference Include="../LunchSplit.Core/LunchSplit.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Square" Version="47.0.0" />
+  </ItemGroup>
+
 </Project>
