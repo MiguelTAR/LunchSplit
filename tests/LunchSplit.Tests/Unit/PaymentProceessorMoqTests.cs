@@ -123,3 +123,39 @@ public sealed class PaymentProcessorMoqTests
             p => p.ProcessPaymentAsync(It.Is<PaymentRequest>(r => r.Amount == 25.00m)),
             Times.Exactly(4));
     }
+
+
+    /// M3-07: Verifies partial batch failure resilience when attendee #2 declines while
+    /// attendees #1 and #3 succeed, reporting 2 successes and 1 failure.
+
+    [TestMethod]
+    public async Task M3_07_ProcessBatchShares_SecondAttendeeDeclines_ReportsTwoSuccessesAndOneFailure()
+    {
+        // Arrange
+        var shares = new List<Share>
+        {
+            new("Alex", 20.00m),
+            new("Blair", 20.00m),
+            new("Casey", 20.00m)
+        };
+
+        var mockProcessor = new Mock<IPaymentProcessor>();
+        mockProcessor
+            .SetupSequence(p => p.ProcessPaymentAsync(It.IsAny<PaymentRequest>()))
+            .ReturnsAsync(new PaymentResult(true, PaymentStatus.Completed, "txn_01"))
+            .ReturnsAsync(new PaymentResult(false, PaymentStatus.Failed, ErrorCode: "CARD_DECLINED"))
+            .ReturnsAsync(new PaymentResult(true, PaymentStatus.Completed, "txn_03"));
+
+        var manager = new BillPaymentManager(mockProcessor.Object);
+
+        // Act
+        var summary = await manager.ChargeBatchAsync(shares, "CAD", "cnon:card-nonce-ok");
+
+        // Assert
+        Assert.AreEqual(2, summary.SuccessCount);
+        Assert.AreEqual(1, summary.FailureCount);
+        mockProcessor.Verify(
+            p => p.ProcessPaymentAsync(It.IsAny<PaymentRequest>()),
+            Times.Exactly(3));
+    }
+}
