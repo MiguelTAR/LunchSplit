@@ -3,10 +3,10 @@ using RestaurantBillSplitter.Infrastructure.Payments;
 
 namespace RestaurantBillSplitter.Tests.Integration;
 
-/// <summary>
+
 /// Tier 1 live integration tests verifying SquarePaymentService against the Square Sandbox API
 /// using official Magic Test Nonces and environment-injected credentials.
-/// </summary>
+
 [TestClass]
 [TestCategory("Tier1")]
 [TestCategory("Integration")]
@@ -14,9 +14,8 @@ public sealed class SquareSandboxTests
 {
     private SquarePaymentService _paymentService = null!;
 
-    /// <summary>
     /// Initializes the SquarePaymentService using externalized Sandbox environment variables.
-    /// </summary>
+
     [TestInitialize]
     public void Setup()
     {
@@ -32,9 +31,8 @@ public sealed class SquareSandboxTests
         _paymentService = new SquarePaymentService(token, locationId, TimeSpan.FromSeconds(5));
     }
 
-    /// <summary>
     /// M3-01: Verifies live Square Sandbox payment authorization succeeds using Magic Nonce cnon:card-nonce-ok.
-    /// </summary>
+    
     [TestMethod]
     public async Task M3_01_ProcessPaymentAsync_ValidMagicNonce_ReturnsSuccessAndTransactionId()
     {
@@ -54,4 +52,25 @@ public sealed class SquareSandboxTests
         Assert.IsFalse(string.IsNullOrWhiteSpace(result.TransactionId));
     }
 
+
+    
+    /// M3-02: Verifies live Square Sandbox card decline handling using Magic Nonce cnon:card-nonce-declined.
+  
+    [TestMethod]
+    public async Task M3_02_ProcessPaymentAsync_DeclinedMagicNonce_ReturnsFailureWithCardDeclinedCode()
+    {
+        // Arrange
+        var request = new PaymentRequest(
+            Amount: 15.00m,
+            CurrencyCode: "CAD",
+            IdempotencyKey: Guid.NewGuid().ToString(),
+            CardNonce: "cnon:card-nonce-declined");
+
+        // Act
+        var result = await _paymentService.ProcessPaymentAsync(request);
+
+        // Assert
+        Assert.IsFalse(result.IsSuccess);
+        Assert.AreEqual("CARD_DECLINED", result.ErrorCode);
+    }
 
