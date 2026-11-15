@@ -86,3 +86,40 @@ public sealed class PaymentProcessorMoqTests
             p => p.ProcessPaymentAsync(It.IsAny<PaymentRequest>()),
             Times.Never);
     }
+
+
+    /// M3-06: Verifies batch payment execution across a 4-attendee split bill invokes
+    /// ProcessPaymentAsync exactly 4 times.
+
+    [TestMethod]
+    public async Task M3_06_ProcessBatchShares_FourAttendeeSplit_InvokesProcessorExactlyFourTimes()
+    {
+        // Arrange
+        var splitter = new Splitter();
+        var bill = new Bill(Subtotal: 100.00m, Tax: 0.00m, TipMode: TipMode.None, TipInput: 0m);
+        var attendees = new List<Attendee>
+        {
+            new("Alex", 1, true),
+            new("Blair", 1, true),
+            new("Casey", 1, true),
+            new("Drew", 1, true)
+        };
+        var shares = splitter.CalculateShares(bill, attendees, RoundingMode.Bankers);
+
+        var mockProcessor = new Mock<IPaymentProcessor>();
+        mockProcessor
+            .Setup(p => p.ProcessPaymentAsync(It.IsAny<PaymentRequest>()))
+            .ReturnsAsync(new PaymentResult(true, PaymentStatus.Completed, "txn_batch"));
+
+        var manager = new BillPaymentManager(mockProcessor.Object);
+
+        // Act
+        var summary = await manager.ChargeBatchAsync(shares, "CAD", "cnon:card-nonce-ok");
+
+        // Assert
+        Assert.AreEqual(4, summary.SuccessCount);
+        Assert.AreEqual(0, summary.FailureCount);
+        mockProcessor.Verify(
+            p => p.ProcessPaymentAsync(It.Is<PaymentRequest>(r => r.Amount == 25.00m)),
+            Times.Exactly(4));
+    }
