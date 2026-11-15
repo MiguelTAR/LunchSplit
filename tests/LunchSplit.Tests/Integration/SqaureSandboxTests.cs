@@ -122,28 +122,26 @@ public sealed class SquareSandboxTests
         Assert.AreEqual(firstResult.TransactionId, secondResult.TransactionId);
     }
 
-
-    /// M3-09: Verifies Square Sandbox idempotency enforcement by submitting the same idempotency key twice
-    /// and confirming the original TransactionId is returned without creating a duplicate charge.
-
+    /// M3-10: Verifies live transaction status retrieval via GET /v2/payments/{payment_id} returns Completed.
+   
     [TestMethod]
-    public async Task M3_09_ProcessPaymentAsync_DuplicateIdempotencyKey_ReturnsOriginalTransactionId()
+    public async Task M3_10_GetTransactionStatusAsync_CompletedPayment_ReturnsCompletedStatus()
     {
-        // Arrange
-        var sharedIdempotencyKey = Guid.NewGuid().ToString();
+        // Arrange: Create an approved payment first to obtain a live Sandbox TransactionId
         var request = new PaymentRequest(
-            Amount: 18.75m,
+            Amount: 32.00m,
             CurrencyCode: "CAD",
-            IdempotencyKey: sharedIdempotencyKey,
+            IdempotencyKey: Guid.NewGuid().ToString(),
             CardNonce: "cnon:card-nonce-ok");
 
+        var paymentResult = await _paymentService.ProcessPaymentAsync(request);
+        Assert.IsTrue(paymentResult.IsSuccess);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(paymentResult.TransactionId));
+
         // Act
-        var firstResult = await _paymentService.ProcessPaymentAsync(request);
-        var secondResult = await _paymentService.ProcessPaymentAsync(request);
+        var status = await _paymentService.GetTransactionStatusAsync(paymentResult.TransactionId!);
 
         // Assert
-        Assert.IsTrue(firstResult.IsSuccess);
-        Assert.IsTrue(secondResult.IsSuccess);
-        Assert.IsFalse(string.IsNullOrWhiteSpace(firstResult.TransactionId));
-        Assert.AreEqual(firstResult.TransactionId, secondResult.TransactionId);
+        Assert.AreEqual(PaymentStatus.Completed, status);
     }
+}
