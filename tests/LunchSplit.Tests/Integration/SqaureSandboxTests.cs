@@ -95,3 +95,29 @@ public sealed class SquareSandboxTests
         Assert.IsFalse(result.IsSuccess);
         Assert.IsFalse(string.IsNullOrWhiteSpace(result.ErrorCode));
     }
+
+
+    /// M3-09: Verifies Square Sandbox idempotency enforcement by submitting the same idempotency key twice
+    /// and confirming the original TransactionId is returned without creating a duplicate charge.
+ 
+    [TestMethod]
+    public async Task M3_09_ProcessPaymentAsync_DuplicateIdempotencyKey_ReturnsOriginalTransactionId()
+    {
+        // Arrange
+        var sharedIdempotencyKey = Guid.NewGuid().ToString();
+        var request = new PaymentRequest(
+            Amount: 18.75m,
+            CurrencyCode: "CAD",
+            IdempotencyKey: sharedIdempotencyKey,
+            CardNonce: "cnon:card-nonce-ok");
+
+        // Act
+        var firstResult = await _paymentService.ProcessPaymentAsync(request);
+        var secondResult = await _paymentService.ProcessPaymentAsync(request);
+
+        // Assert
+        Assert.IsTrue(firstResult.IsSuccess);
+        Assert.IsTrue(secondResult.IsSuccess);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(firstResult.TransactionId));
+        Assert.AreEqual(firstResult.TransactionId, secondResult.TransactionId);
+    }
