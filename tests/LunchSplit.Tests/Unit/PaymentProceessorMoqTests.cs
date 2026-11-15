@@ -39,7 +39,7 @@ public sealed class PaymentProcessorMoqTests
 
     /// M3-04: Verifies ProcessPaymentAsync is invoked with the exact dollar amount
     /// calculated for an attendee share.
-    /// </summary>
+
     [TestMethod]
     public async Task M3_04_ProcessSingleShare_ValidShare_InvokesProcessorWithExactDollarAmount()
     {
@@ -66,3 +66,23 @@ public sealed class PaymentProcessorMoqTests
             Times.Once);
     }
 
+    /// M3-05: Verifies a $0.00 share short-circuits before hitting the payment gateway
+    /// so IPaymentProcessor.ProcessPaymentAsync is never invoked.
+
+    [TestMethod]
+    public async Task M3_05_ProcessSingleShare_ZeroDollarAmount_NeverInvokesPaymentProcessor()
+    {
+        // Arrange
+        var mockProcessor = new Mock<IPaymentProcessor>(MockBehavior.Strict);
+        var manager = new BillPaymentManager(mockProcessor.Object);
+        var zeroShare = new Share("ExcludedGuest", 0.00m);
+
+        // Act
+        var result = await manager.ChargeShareAsync(zeroShare, "CAD", "cnon:card-nonce-ok");
+
+        // Assert
+        Assert.IsTrue(result.IsSuccess);
+        mockProcessor.Verify(
+            p => p.ProcessPaymentAsync(It.IsAny<PaymentRequest>()),
+            Times.Never);
+    }
