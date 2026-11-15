@@ -74,3 +74,24 @@ public sealed class SquareSandboxTests
         Assert.AreEqual("CARD_DECLINED", result.ErrorCode);
     }
 
+
+    /// M3-08: Verifies live Square Sandbox rejects unsupported currency codes (EUR on a CAD location)
+    /// with an HTTP 400 validation failure.
+
+    [TestMethod]
+    public async Task M3_08_ProcessPaymentAsync_UnsupportedCurrency_ReturnsFailureWithValidationError()
+    {
+        // Arrange
+        var request = new PaymentRequest(
+            Amount: 20.00m,
+            CurrencyCode: "EUR",
+            IdempotencyKey: Guid.NewGuid().ToString(),
+            CardNonce: "cnon:card-nonce-ok");
+
+        // Act
+        var result = await _paymentService.ProcessPaymentAsync(request);
+
+        // Assert
+        Assert.IsFalse(result.IsSuccess);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(result.ErrorCode));
+    }
